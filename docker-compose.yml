@@ -1,6 +1,26 @@
-﻿services:
+﻿version: '3.9'
+
+services:
   webapplication1:
     image: webapplication1
     build:
       context: .
       dockerfile: WebApplication1/Dockerfile
+    depends_on:
+      - sqlserver
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sqlserver-db
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=YourStrong!Passw0rd
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlvolume:/var/opt/mssql
+
+volumes:
+  sqlvolume:
