@@ -12,7 +12,7 @@ Klonirajte ovaj repozitorij na svoje računalo:
 
 ```bash
 git clone https://github.com/Cuks98/zadatak.git
-
+```
 ### 2. Otvorite projekt
 
 Otvorite projekt u vašem IDE-u (Visual Studio ili JetBrains Rider).
@@ -29,3 +29,4 @@ Pozicionirajte se u direktorij `/zadatak` i koristite terminal za pokretanje slj
 
 ```bash
 docker-compose up
+```
