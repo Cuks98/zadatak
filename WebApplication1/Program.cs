@@ -69,7 +69,7 @@ app.MapDelete("/settings/{id}", async (AppDbContext db, int id) =>
     .WithTags("Settings")
     .WithOpenApi();
 
-app.MapGet("/settings", async (AppDbContext db, DateTime? effectiveDate) =>
+app.MapGet("/settings/current", async (AppDbContext db, DateTime? effectiveDate) =>
 {
     var query = db.Settings
         .OrderByDescending(s => s.ValidFrom);
@@ -85,5 +85,13 @@ app.MapGet("/settings", async (AppDbContext db, DateTime? effectiveDate) =>
 })
 .WithTags("Settings")
 .WithOpenApi();
+
+app.MapGet("/settings", async (AppDbContext db) =>
+    {
+        return await db.Settings
+            .OrderByDescending(s => s.ValidFrom).ToListAsync();
+    })
+    .WithTags("Settings")
+    .WithOpenApi();
 
 app.Run();

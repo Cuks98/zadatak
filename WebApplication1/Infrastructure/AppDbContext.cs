@@ -14,5 +14,10 @@ internal sealed class AppDbContext : DbContext
         modelBuilder.Entity<Setting>()
             .HasIndex(s => new { s.Id })
             .IsUnique();
+        
+        modelBuilder.Entity<Setting>().HasData(
+            new Setting { Id = 1, Value = "12.0%", ValidFrom = new DateTime(2020, 1, 1) },
+            new Setting { Id = 2, Value = "10.0%", ValidFrom = new DateTime(2022, 1, 1)  }
+        );
     }
 }
