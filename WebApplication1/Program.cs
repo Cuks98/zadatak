@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using WebApplication1;
 using WebApplication1.Extensions;
 using WebApplication1.Infrastructure;
+using WebApplication1.Models.Settings;
+using WebApplication1.Presentation.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,7 +12,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
- 
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -23,32 +25,65 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
+app.MapPost("/settings", async (AppDbContext db, CreateRequest createRequest) =>
     {
-        var forecast = Enumerable.Range(1, 5).Select(index =>
-                new WeatherForecast
-                (
-                    DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                    Random.Shared.Next(-20, 55),
-                    summaries[Random.Shared.Next(summaries.Length)]
-                ))
-            .ToArray();
-        return forecast;
+        await using var transaction = await db.Database.BeginTransactionAsync();
+
+        var setting = new Setting
+        {
+            Value = createRequest.Value,
+            ValidFrom = createRequest.ValidFrom
+        };
+        db.Settings.Add(setting);
+
+        await db.SaveChangesAsync();
+        await transaction.CommitAsync();
+
+        return Results.Created($"/settings/{setting.Id}", setting.Id);
     })
-    .WithName("GetWeatherForecast")
+    .WithTags("Settings")
     .WithOpenApi();
 
-app.Run();
-
-namespace WebApplication1
+app.MapPut("/settings/{id}", async (AppDbContext db, int id, UpdateRequest updateRequest) =>
 {
-    record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+    var setting = await db.Settings.FindAsync(id);
+    if (setting == null) return Results.NotFound();
+
+    setting.Value = updateRequest.Value;
+
+    await db.SaveChangesAsync();
+    return Results.Ok(setting);
+})
+.WithTags("Settings")
+.WithOpenApi();
+
+app.MapDelete("/settings/{id}", async (AppDbContext db, int id) =>
     {
-        public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+        var setting = await db.Settings.FindAsync(id);
+        if (setting == null) return Results.NotFound();
+
+        db.Settings.Remove(setting);
+        await db.SaveChangesAsync();
+        return Results.NoContent();
+    })
+    .WithTags("Settings")
+    .WithOpenApi();
+
+app.MapGet("/settings", async (AppDbContext db, DateTime? effectiveDate) =>
+{
+    var query = db.Settings
+        .OrderByDescending(s => s.ValidFrom);
+
+    if (effectiveDate.HasValue)
+    {
+        var setting = await query.FirstOrDefaultAsync(s => s.ValidFrom <= effectiveDate.Value);
+        return setting != null ? Results.Ok(setting) : Results.NotFound();
     }
-}
+
+    var currentSetting = await query.FirstOrDefaultAsync(s => s.ValidFrom <= DateTime.UtcNow);
+    return currentSetting != null ? Results.Ok(currentSetting) : Results.NotFound();
+})
+.WithTags("Settings")
+.WithOpenApi();
+
+app.Run();
